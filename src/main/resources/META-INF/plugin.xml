@@ -1,0 +1,38 @@
+<idea-plugin>
+    <id>com.LanBaiCode.HookCodeGenerator</id>
+
+    <name>Hook Code Generator</name>
+
+    <vendor email="LanBaiCode@proton.me" url="https://github.com/LanBaiCode">LanBaiCode</vendor>
+
+    <description><![CDATA[
+    <p>
+        <a href="https://github.com/LanBaiCode/HookCodeGenerator">Hook Code Generator</a>
+    </p>
+    <p><strong>English:</strong> Hook code generator, automatically generates Hook code for Xposed and Frida.</p>
+    <p><strong>中文:</strong> Hook代码生成器, 自动生成Xposed和Frida的Hook代码</p>
+]]></description>
+
+
+
+
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.lang</depends>
+    <depends>com.intellij.modules.java</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+
+    </extensions>
+    <actions>
+        <action id="com.LanBaiCode.FridaHookGenerator" class="com.lanbaicode.FridaHook"
+                text="FridaCode" description="Generate FridaHook code">
+            <add-to-group group-id="EditorPopupMenu" anchor="first"/>
+        </action>
+        <action id="com.LanBaiCode.XposedHookGenerator" class="com.lanbaicode.XposedHook"
+                text="XposedCode" description="Generate XposedHook code">
+            <add-to-group group-id="EditorPopupMenu" anchor="first"/>
+        </action>
+    </actions>
+
+</idea-plugin>

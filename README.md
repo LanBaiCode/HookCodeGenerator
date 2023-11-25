@@ -15,8 +15,8 @@
 - 支持类名、函数、字段
 - 生成的内容自动保存至剪贴板
 # 安装
-- 你可以通过 [Jetbrains Marketplace](#)安装此插件
-- 也可通过这里[下载](#)并选择磁盘安装
+- 你可以通过 [Jetbrains Marketplace](https://plugins.jetbrains.com/plugin/23194-hook-code-generator)安装此插件
+- 也可通过这里[下载](https://github.com/LanBaiCode/HookCodeGenerator/releases/tag/release)并选择磁盘安装
 
 
 # 使用

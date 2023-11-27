@@ -13,6 +13,17 @@ import java.util.Map;
 import java.util.Objects;
 
 public class FridaHook extends AnAction {
+    private static final Map<String, String> ARRAY_TYPE_MAPPING = Map.of(
+            "int", "[I",
+            "byte", "[B",
+            "short", "[S",
+            "long", "[J",
+            "float", "[F",
+            "double", "[D",
+            "char", "[C",
+            "boolean", "[Z"
+    );
+
     @Override
     public void actionPerformed(AnActionEvent e) {
         PsiElement element = (PsiElement) e.getDataContext().getData("psi.Element");
@@ -41,7 +52,6 @@ public class FridaHook extends AnAction {
         return String.format(""" 
                 let %s = Java.use("%s");""", psiClass.getName(), psiClass.getQualifiedName());
     }
-
 
     private String generateMethodSnippet(PsiMethod psiMethod) {
         PsiClass psiClass = PsiTreeUtil.getParentOfType(psiMethod, PsiClass.class);
@@ -116,19 +126,7 @@ public class FridaHook extends AnAction {
     private String parseArgType(PsiType type) {
         String CanonicalText = type.getCanonicalText();
         if (type instanceof PsiArrayType arrayType) {
-            //frida的基本类型数组需要修改成以下形式
-            Map<String, String> ARRAY_TYPE_MAPPING = Map.of(
-                    "int", "[I",
-                    "byte", "[B",
-                    "short", "[S",
-                    "long", "[J",
-                    "float", "[F",
-                    "double", "[D",
-                    "char", "[C",
-                    "boolean", "[Z"
-            );
             CanonicalText = ARRAY_TYPE_MAPPING.getOrDefault(arrayType.getCanonicalText(), "");
-
             //<Object>[] (如String[], Set[]等), 改成: L<package>.<Object>;
             if (arrayType.getComponentType() instanceof PsiClassType classType) {
                 CanonicalText = "[L" + Objects.requireNonNull(classType.resolve()).getQualifiedName() + ";";
@@ -139,7 +137,6 @@ public class FridaHook extends AnAction {
         }
         return CanonicalText;
     }
-
 
     private String generateFieldSnippet(PsiField psiField) {
         PsiClass psiClass = PsiTreeUtil.getParentOfType(psiField, PsiClass.class);

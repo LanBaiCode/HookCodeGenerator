@@ -14,6 +14,16 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class XposedHook extends AnAction {
+    private static final Map<String, String> PRIMITIVE_TYPE_MAPPING = Map.of(
+            "int", "Int",
+            "byte", "Byte",
+            "short", "Short",
+            "long", "Long",
+            "float", "Float",
+            "double", "Double",
+            "char", "Char",
+            "boolean", "Boolean"
+    );
 
     @Override
     public void actionPerformed(AnActionEvent e) {
@@ -39,14 +49,20 @@ public class XposedHook extends AnAction {
         }
     }
 
-
     private String generateMethodSnippet(PsiMethod psiMethod) {
         PsiClass psiClass = PsiTreeUtil.getParentOfType(psiMethod, PsiClass.class);
         if (psiClass == null) return "";
 
-        //检查是否构造函数
-        String xposedMethod = psiMethod.isConstructor() ? "findAndHookConstructor" : "findAndHookMethod";
         String argsType = "";
+        String methodName = "";
+        String xposedMethod;
+        //检查是否构造函数, 构造函数不需要函数名称
+        if (psiMethod.isConstructor()) {
+            xposedMethod = "findAndHookConstructor";
+        } else {
+            xposedMethod = "findAndHookMethod";
+            methodName = "\"" + psiMethod.getName() + "\", ";
+        }
         if (psiMethod.hasParameters()) {
             argsType = Arrays.stream(psiMethod.getParameterList().getParameters())
                     .map(parameter -> parseArgType(parameter.getType()) + ".class, ")
@@ -54,7 +70,7 @@ public class XposedHook extends AnAction {
         }
 
         return String.format("""
-                            XposedHelpers.%s("%s", classLoader, "%s", %snew XC_MethodHook() {
+                            XposedHelpers.%s("%s", classLoader, %snew XC_MethodHook() {
                                 @Override
                                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                                     super.beforeHookedMethod(param);
@@ -64,15 +80,15 @@ public class XposedHook extends AnAction {
                                     super.afterHookedMethod(param);
                                 }
                             });
-                """, xposedMethod, psiClass.getQualifiedName(), psiMethod.getName(), argsType);
+                """, xposedMethod, psiClass.getQualifiedName(), methodName + argsType);
     }
 
     private String parseArgType(PsiType type) {
         String CanonicalText = type.getCanonicalText();
-        //只需要优化Object[], List<>, Map<> ...
-        if (type instanceof PsiArrayType arrayType) {
-            if (arrayType.getComponentType() instanceof PsiClassType classType) {
-                CanonicalText = Objects.requireNonNull(classType.resolve()).getQualifiedName();
+        //只处理省略类型还有泛型
+        if (type instanceof PsiEllipsisType ellipsisType) {
+            if (ellipsisType.getComponentType() instanceof PsiClassType classType) {
+                CanonicalText = Objects.requireNonNull(classType.resolve()).getQualifiedName() + "[]";
             }
         } else if (type instanceof PsiClassType classType) {
             CanonicalText = Objects.requireNonNull(classType.resolve()).getQualifiedName();
@@ -80,39 +96,20 @@ public class XposedHook extends AnAction {
         return CanonicalText;
     }
 
-
     private String generateFieldSnippet(PsiField psiField) {
         PsiClass psiClass = PsiTreeUtil.getParentOfType(psiField, PsiClass.class);
         if (psiClass == null) return "";
 
-        String xposedMethod = getXposedMethod(psiField);
-        return String.format("""
-                        Class<?> %s = XposedHelpers.findClass("%s", classLoader);
-                        %s(%s, "%s");
-                        """, psiClass.getName(), psiClass.getQualifiedName(),
-                xposedMethod, psiClass.getName(), psiField.getName());
-    }
-
-    private String getXposedMethod(PsiField psiField) {
-        Map<String, String> PRIMITIVE_TYPE_MAPPING = Map.of(
-                "int", "Int",
-                "byte", "Byte",
-                "short", "Short",
-                "long", "Long",
-                "float", "Float",
-                "double", "Double",
-                "char", "Char",
-                "boolean", "Boolean"
-        );
         String isStatic = psiField.hasModifierProperty(PsiModifier.STATIC) ? "Static" : "";
         String type = PRIMITIVE_TYPE_MAPPING.getOrDefault(psiField.getType().getPresentableText(), "Object");
-        return "XposedHelpers.get" + isStatic + type + "Field";
-    }
+        String xposedMethod = "XposedHelpers.get" + isStatic + type + "Field";
 
+        return String.format("%s(/*runtimeObject*/, \"%s\");", xposedMethod, psiField.getName());
+    }
 
     private String generateClassSnippet(PsiClass psiClass) {
         return String.format("""
-                Class<?> %s = XposedHelpers.findClass("%s", classLoader);
+                Class<?> %sClass = XposedHelpers.findClass("%s", classLoader);
                  """, psiClass.getName(), psiClass.getQualifiedName());
     }
 
